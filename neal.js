@@ -1,49 +1,47 @@
-// Sandboxels AI Controller Mod
-// Version 1.0
+// Sandboxels AI Controller - Safe Version
+(function() {
+    console.log("AI Mod Initializing...");
 
-var aiEnabled = true;
+    // Function to handle the AI's logic
+    function aiTick() {
+        if (!window.gameActive || !window.pixelMap) return;
 
-function runAI() {
-    if (!aiEnabled) return;
+        // Try 10 actions per tick
+        for (let i = 0; i < 10; i++) {
+            let x = Math.floor(Math.random() * width);
+            let y = Math.floor(Math.random() * height);
 
-    // 1. Pick a random coordinate
-    let x = Math.floor(Math.random() * width);
-    let y = Math.floor(Math.random() * height);
-
-    // 2. "See" what is currently there
-    let currentPixel = pixelMap[x][y];
-
-    // 3. Logic: Decide what to place based on surroundings
-    if (isEmpty(x, y)) {
-        // If empty, 10% chance to start "Life" or "Weather"
-        let dice = Math.random();
-        if (dice < 0.05) {
-            createPixel("dirt", x, y);
-        } else if (dice < 0.08) {
-            createPixel("water", x, y);
-        }
-    } else {
-        // Interaction Logic: If it sees water, try to grow something
-        if (currentPixel.element === "water") {
-            if (Math.random() < 0.1) {
-                createPixel("algae", x, y - 1);
+            // 1. If empty, randomly seed the world
+            if (isEmpty(x, y)) {
+                let r = Math.random();
+                if (r < 0.01) createPixel("dirt", x, y);
+                if (r > 0.99) createPixel("water", x, y);
+            } 
+            
+            // 2. React to existing pixels
+            else {
+                let p = pixelMap[x][y];
+                // If it sees fire, try to "help" with water
+                if (p.element === "fire") {
+                    createPixel("water", x, y - 2);
+                }
+                // If it sees plant life, give it a friend
+                if (p.element === "grass" && Math.random() > 0.95) {
+                    createPixel("flower", x + 1, y);
+                }
             }
         }
-        // If it sees fire, try to extinguish it
-        if (currentPixel.element === "fire") {
-            createPixel("water", x, y - 5);
-        }
     }
-}
 
-// Hook into the game's tick (runs every frame)
-let oldTick = tick;
-tick = function() {
-    oldTick();
-    // Run the AI 5 times per frame for speed
-    for(let i=0; i<5; i++) {
-        runAI();
+    // Safely hook into the game loop
+    if (window.update) {
+        let oldUpdate = window.update;
+        window.update = function() {
+            oldUpdate();
+            aiTick();
+        };
+        console.log("AI Mod Active! Watch the canvas.");
+    } else {
+        console.error("Game engine not found. Are you on neal.fun/sandboxels?");
     }
-};
-
-console.log("AI Controller Mod Loaded! The AI is now playing.");
+})();
